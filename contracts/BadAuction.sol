@@ -27,9 +27,11 @@ contract BadAuction is AuctionInterface {
         if (msg.value > highestBid) {
             refunds[highestBidder] = Refund(highestBid, true); 
             lastHighestBidder = highestBidder; 
-            highestBid = msg.value;
-            highestBidder = msg.sender; 
-            refund(lastHighestBidder);
+            
+            if (refund(lastHighestBidder)) {
+                highestBid = msg.value;
+                highestBidder = msg.sender; 
+            }
             return true;
         } else {
             refunds[msg.sender] = Refund(msg.value, true); 
@@ -45,8 +47,12 @@ contract BadAuction is AuctionInterface {
             refunds[addrs].funds = 0;
             refunds[addrs].initialized = false;
             if (!addrs.send(funds)) {
+                if (msg.sender.send(msg.value)) {
+                    return false;
+                }
                 return false;
             }
+            return true;
         }
         return false;
     }
