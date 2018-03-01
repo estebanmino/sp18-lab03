@@ -5,7 +5,12 @@ import "./AuctionInterface.sol";
 /** @title BadAuction */
 contract BadAuction is AuctionInterface {
 
+    struct Refund {
+        uint funds;
+        bool initialized;
+    }
 
+    mapping(address => Refund) refunds;
 /* Bid function, vulnerable to reentrency attack.
     * Must return true on successful send and/or bid,
     * bidder reassignment
@@ -13,33 +18,37 @@ contract BadAuction is AuctionInterface {
     * their funds back
     */
 
-
     function bid() external payable returns (bool) {
         // YOUR CODE HERE
 
         // reentrency attack, this function can be called again before
         // the first invocation of the function was finished
+        address lastHighestBidder = 0;
         if (msg.value > highestBid) {
-
-            if (highestBidder != 0) {
-                refundHighestBidder(); // record the refund that this user can claim
-            }
-
-            highestBidder = msg.sender;
+            refunds[highestBidder] = Refund(highestBid, true); 
+            lastHighestBidder = highestBidder; 
             highestBid = msg.value;
+            highestBidder = msg.sender; 
+            refund(lastHighestBidder);
             return true;
         } else {
-            msg.sender.transfer(msg.value);
+            refunds[msg.sender] = Refund(msg.value, true); 
+            refund(msg.sender);
             return false;
         }
+        
     }
-
     
-    function refundHighestBidder() private returns (bool) {
-        if (!highestBidder.send(highestBid)) {
-            return false;
+    function refund(address addrs) private returns (bool) {
+        if (refunds[addrs].initialized) {
+            uint funds = refunds[addrs].funds;
+            refunds[addrs].funds = 0;
+            refunds[addrs].initialized = false;
+            if (!addrs.send(funds)) {
+                return false;
+            }
         }
-        return true;
+        return false;
     }
     
     /* 	Reduce bid function. Vulnerable to attack.

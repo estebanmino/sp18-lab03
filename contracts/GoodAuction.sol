@@ -30,15 +30,12 @@ contract GoodAuction is AuctionInterface {
         // Not be able to displace the previous highest bidder 
         // if bidding on a bad auction and the previous highest bidder was poisoned
         if (msg.value > highestBid) {
-            if (highestBidder != 0) {
-                refunds[highestBidder].funds = highestBid; 
-                refunds[highestBidder].initialized = true; 
-            }
-
+            refunds[highestBidder] = Refund(highestBid, true); 
             highestBid = msg.value;
             highestBidder = msg.sender; 
             return true;
         } else {
+            refunds[msg.sender] = Refund(msg.value, true); 
             return false;
         }
     }
@@ -74,11 +71,7 @@ contract GoodAuction is AuctionInterface {
     before calling withdrawRefund(). Function returns
     amount owed.  */
     function getMyBalance() external constant  returns(uint) {
-        if (refunds[msg.sender].initialized == true) {
-            return refunds[msg.sender].funds;
-        } else {
-            return 0;
-        }
+        return refunds[msg.sender].funds;
     }
 
     /* in any situation a bidder with a lower or the same bid
